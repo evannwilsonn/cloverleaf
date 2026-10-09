@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cloverleaf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;600;700;800&family=Overpass+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a traffic-ops board. Summary strip, then the network over time, then corridors and cameras, then how trustworthy the numbers are. */
+:root{
+  color-scheme:light;
+  --bg:#eef1ef;--surface:#ffffff;--surface-2:#f5f7f6;--line:#dde3e0;--line-2:#c9d1cd;
+  --text:#121816;--text-2:#46504c;--text-3:#6f7a76;
+  --sign:#0b6b3f;--sign-ink:#ffffff;            /* freeway guide-sign green, used for the brand mark and route chips only */
+  --s1:#2a6fdb;--s2:#a8630f;--night:rgba(18,24,22,.06);
+  --ok:#16865a;--ok-bg:rgba(22,134,90,.10);--warn:#a8630f;--warn-bg:rgba(168,99,15,.12);--bad:#c2412d;--bad-bg:rgba(194,65,45,.10);
+  --focus:#2a6fdb;
+  --font:"Overpass","Highway Gothic",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Overpass Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#0b0f0d;--surface:#121816;--surface-2:#18201d;--line:#232d29;--line-2:#303c37;
+  --text:#eef2f0;--text-2:#b3bdb8;--text-3:#86918c;--sign:#148a55;--sign-ink:#ffffff;
+  --s1:#3d7eff;--s2:#c27a1a;--night:rgba(255,255,255,.04);
+  --ok:#4cc38a;--ok-bg:rgba(76,195,138,.12);--warn:#e0a24a;--warn-bg:rgba(224,162,74,.13);--bad:#ff7a6b;--bad-bg:rgba(255,122,107,.12);--focus:#7ea8ff}}
+:root[data-theme="dark"]{
+  color-scheme:dark;--bg:#0b0f0d;--surface:#121816;--surface-2:#18201d;--line:#232d29;--line-2:#303c37;
+  --text:#eef2f0;--text-2:#b3bdb8;--text-3:#86918c;--sign:#148a55;--sign-ink:#ffffff;
+  --s1:#3d7eff;--s2:#c27a1a;--night:rgba(255,255,255,.04);
+  --ok:#4cc38a;--ok-bg:rgba(76,195,138,.12);--warn:#e0a24a;--warn-bg:rgba(224,162,74,.13);--bad:#ff7a6b;--bad-bg:rgba(255,122,107,.12);--focus:#7ea8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 var(--font)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1320px;margin:0 auto;padding-block:22px 48px;padding-inline:20px}
+header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.brand{display:flex;gap:12px;align-items:center}
+.mark{background:var(--sign);color:var(--sign-ink);border-radius:8px;padding:6px 12px 3px;font:800 22px/1.1 var(--font);letter-spacing:.01em;border:2px solid var(--sign-ink);box-shadow:0 0 0 2px var(--sign)}
+.brand p{margin:0;color:var(--text-2);font-size:14px;max-width:62ch}
+.asof{font:500 12px var(--mono);color:var(--text-3);text-align:right}
+.asof b{color:var(--text);font-weight:500}
+.brief{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:12px;font-size:15.5px;line-height:1.55}
+.brief b{font-weight:700}
+.cat-h{margin:18px 2px 8px;font:700 11.5px var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.tile .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tile .lbl{font-size:13.5px;font-weight:600;color:var(--text-2)}
+.tile .v{font-size:28px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile .cmp{font-size:12.5px;color:var(--text-3)}
+.tile svg{display:block;width:100%;height:30px;margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:700 11.5px var(--font);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.pill.ok{color:var(--ok);background:var(--ok-bg)}.pill.warn{color:var(--warn);background:var(--warn-bg)}.pill.bad{color:var(--bad);background:var(--bad-bg)}.pill.na{color:var(--text-3);background:var(--surface-2)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.card h2{margin:0;font-size:16px;font-weight:700;text-wrap:balance}
+.card .sub{font-size:12.5px;color:var(--text-3)}
+.full{grid-column:1/-1}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-2)}
+.legend i{display:inline-block;width:14px;height:2px;margin-right:6px;vertical-align:3px}
+.legend i.box{height:10px;vertical-align:-1px;border-radius:2px}
+.plot{position:relative}
+.plot svg{display:block;width:100%;height:auto;overflow:visible}
+.ax{font:11px var(--mono);fill:var(--text-3)}
+.gridl{stroke:var(--line);stroke-width:1}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;font-size:12.5px;white-space:nowrap;opacity:0;transform:translate(-50%,calc(-100% - 12px));transition:opacity .12s;z-index:3;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.tip.on{opacity:1}.tip b{font-weight:700}.tip span{color:var(--text-2)}
+.note{margin:10px 0 0;font-size:13px;color:var(--text-2);max-width:90ch}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-weight:600;color:var(--text-3);text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wbar{display:inline-block;height:8px;border-radius:2px;background:var(--s1);margin-right:8px;vertical-align:0}
+.chip{display:inline-block;font:700 11px/1 var(--font);background:var(--sign);color:var(--sign-ink);border-radius:4px;padding:4px 6px 2px;margin-right:6px;vertical-align:1px}
+.cams{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.cam{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface-2);display:flex;flex-direction:column;min-width:0}
+.cam .img{aspect-ratio:16/9;background:var(--line);max-width:100%;position:relative}
+.cam img{width:100%;height:100%;object-fit:cover;display:block}
+.cam .img .pill{position:absolute;top:8px;left:8px;background:var(--surface)}
+.cam .meta{padding:8px 10px 10px;display:flex;flex-direction:column;gap:3px}
+.cam .name{font-weight:700;font-size:13.5px;line-height:1.3}
+.cam .stats{display:flex;justify-content:space-between;font:12px var(--mono);color:var(--text-2)}
+.qbar{display:grid;grid-template-columns:170px minmax(0,1fr) 70px;gap:10px;align-items:center;padding:5px 0;font-size:13px}
+.qbar .track{height:12px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.qbar .fill{height:100%;border-radius:3px}
+.qbar .n{text-align:right;font:12px var(--mono);color:var(--text-2)}
+.acc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.acc .box{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface-2)}
+.acc .box h3{margin:0 0 6px;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.acc dl{margin:0;display:grid;grid-template-columns:auto auto;gap:3px 12px;font-size:13px}
+.acc dt{color:var(--text-3)}.acc dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+footer{margin-top:20px;font-size:12.5px;color:var(--text-3);max-width:110ch;line-height:1.6}
+footer a{color:var(--text-2)}
+.empty{color:var(--text-3);font-size:13.5px;padding:18px 0}
+@media (max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}}
+@media (max-width:520px){.tiles{grid-template-columns:1fr}.acc{grid-template-columns:1fr}.qbar{grid-template-columns:120px minmax(0,1fr) 56px}.asof{text-align:left}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">Cloverleaf</div>
+      <p>Bay Area freeway traffic, measured from live Caltrans camera video every 30 minutes.</p>
+    </div>
+    <div class="asof" id="asof"></div>
+  </header>
+  <div class="brief" id="brief"></div>
+
+  <div class="cat-h">Traffic · latest full day of daylight video</div>
+  <div class="tiles" id="tiles-traffic"></div>
+  <div class="cat-h">Collection · is the data trustworthy</div>
+  <div class="tiles" id="tiles-platform"></div>
+
+  <div class="grid">
+    <section class="card full" aria-labelledby="h-time">
+      <header><h2 id="h-time">Vehicles per minute across the network</h2>
+        <div class="legend"><span><i style="background:var(--s1)"></i>Average per camera, each collector run</span><span><i class="box" style="background:var(--night);border:1px solid var(--line-2)"></i>Dark: excluded</span></div></header>
+      <div class="plot" id="p-time"></div>
+    </section>
+    <section class="card" aria-labelledby="h-hour">
+      <header><h2 id="h-hour">Typical day</h2><select id="corr" aria-label="Corridor"></select></header>
+      <div class="legend" id="hour-legend"></div>
+      <div class="plot" id="p-hour"></div>
+    </section>
+    <section class="card" aria-labelledby="h-corr">
+      <header><h2 id="h-corr">Corridors</h2><span class="sub" id="corr-sub"></span></header>
+      <div class="tbl" id="t-corr"></div>
+    </section>
+    <section class="card full" aria-labelledby="h-cams">
+      <header><h2 id="h-cams">Cameras</h2><span class="sub">Still from the export · last 24 hours of captures</span></header>
+      <div class="cams" id="cams"></div>
+    </section>
+    <section class="card" aria-labelledby="h-q">
+      <header><h2 id="h-q">Where every capture went</h2><span class="sub" id="q-sub"></span></header>
+      <div id="quality"></div>
+      <p class="note">Each capture is kept or excluded by the first rule it fails, in this order. Only valid captures feed the traffic numbers; every capture counts toward availability.</p>
+    </section>
+    <section class="card" aria-labelledby="h-acc">
+      <header><h2 id="h-acc">Can the counts be trusted?</h2><span class="sub">Detector vs hand-counted frames</span></header>
+      <div class="acc" id="acc"></div>
+      <p class="note" id="acc-note"></p>
+    </section>
+    <section class="card full" aria-labelledby="h-wx">
+      <header><h2 id="h-wx">Weather</h2><span class="sub">Daylight captures by conditions at the nearest NWS station that hour</span></header>
+      <div class="tbl" id="t-wx"></div>
+    </section>
+  </div>
+  <footer>
+    Video: Caltrans District 4 CCTV live streams. Weather: National Weather Service station observations. Vehicles are detected and tracked with YOLOv8s + ByteTrack on a 12-second clip per camera; a vehicle counts as moving when it is tracked for 3+ frames and crosses at least 4% of the frame. Congestion compares each camera's speed to its own free-flow speed, because camera angles make raw speeds incomparable between cameras.
+    Built with dbt on Snowflake · <a href="https://github.com/evannwilsonn/cloverleaf" target="_blank" rel="noopener">github.com/evannwilsonn/cloverleaf</a>
+  </footer>
+</div>
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+<script>
+(async () => {
+const D = window.CL_DATA || await (await fetch('data.json')).json();
+const $ = id => document.getElementById(id);
+const pct = (v, d=0) => v == null ? '–' : (v*100).toFixed(d) + '%';
+const num = (v, d=1) => v == null ? '–' : (+v).toFixed(d);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtTime = s => { const d = new Date(s); return d.toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); };
+const fmtDay = s => new Date(s + 'T12:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+const tip = $('tip');
+function showTip(el, html, x, y){ tip.innerHTML = html; const r = el.getBoundingClientRect(); tip.style.left = (r.left + x + window.scrollX) + 'px'; tip.style.top = (r.top + y + window.scrollY) + 'px'; tip.classList.add('on'); }
+function hideTip(){ tip.classList.remove('on'); }
+
+const tl = D.timeline;
+const last = tl[tl.length - 1];
+$('asof').innerHTML = `Latest run <b>${last ? fmtTime(last.run_started_at_local) : '–'}</b> Pacific<br>${tl.length} runs · data from ${D.source === 'snowflake' ? 'Snowflake' : 'DuckDB'}`;
+
+// KPIs: each KPI's value on each day; "latest" = the latest day that has a value
+const cat = Object.fromEntries(D.kpi_catalog.map(k => [k.kpi_id, k]));
+const byKpi = {};
+D.kpis.forEach(r => (byKpi[r.kpi_id] ||= []).push(r));
+function spark(vals){
+  const v = vals.filter(x => x != null); if (v.length < 2) return '';
+  const w = 200, h = 30, lo = Math.min(...v), hi = Math.max(...v), sp = hi - lo || 1;
+  const pts = vals.map((x, i) => x == null ? null : [i / (vals.length - 1) * w, h - 3 - (x - lo) / sp * (h - 6)]).filter(Boolean);
+  const e = pts[pts.length - 1];
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--s1)" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts.map(p => p.join(',')).join(' ')}"/><circle cx="${e[0]}" cy="${e[1]}" r="3" fill="var(--s1)"/></svg>`;
+}
+function tile(id){
+  const k = cat[id], rows = byKpi[id] || [];
+  const withV = rows.filter(r => r.value != null);
+  const cur = withV[withV.length - 1], prev = withV[withV.length - 2];
+  const fmt = v => k.unit === 'pct' ? pct(v, 1) : num(v, 1);
+  let pill = '<span class="pill na">No target</span>';
+  if (cur && k.target != null && k.target !== '') pill = cur.target_status === 'met' ? `<span class="pill ok">Target ${pct(+k.target)} met</span>` : `<span class="pill bad">Below ${pct(+k.target)} target</span>`;
+  const cmp = cur ? `${fmtDay(cur.local_date)}` + (prev ? ` · ${fmtDay(prev.local_date)}: ${fmt(prev.value)}` : '') : 'Not enough daylight video yet';
+  return `<div class="tile" title="${esc(k.definition)}"><div class="row"><span class="lbl">${esc(k.kpi_name)}</span>${pill}</div>
+    <div class="v">${cur ? fmt(cur.value) + (k.unit === 'veh/min' ? '<span style="font-size:14px;color:var(--text-3);font-weight:600"> veh/min</span>' : '') : '–'}</div>
+    <div class="cmp">${cmp}</div>${spark(rows.map(r => r.value))}</div>`;
+}
+$('tiles-traffic').innerHTML = ['vehicles_per_min', 'truck_share', 'congestion_rate'].map(tile).join('');
+$('tiles-platform').innerHTML = ['collection_coverage', 'feed_availability', 'daylight_valid_rate'].map(tile).join('');
+
+// Brief
+{
+  const cams = D.cameras;
+  const live = cams.filter(c => c.last_stream_status === 'ok' && !['no_signal','frozen_feed','short_clip'].includes(c.last_exclusion_reason)).length;
+  const dayRuns = tl.filter(r => r.is_daylight && r.vehicles_per_min != null);
+  const busiest = [...D.corridors].filter(c => c.vehicles_per_min != null).sort((a, b) => b.vehicles_per_min - a.vehicles_per_min)[0];
+  const acc = D.accuracy.find(a => a.light === 'Daylight');
+  let s = `<b>${live} of ${cams.length}</b> cameras were delivering live video on the latest run. `;
+  if (dayRuns.length) {
+    const r = dayRuns[dayRuns.length - 1];
+    s += `In the latest daylight run the average camera saw <b>${num(r.vehicles_per_min)} vehicles a minute</b>${r.congestion_rate != null ? `, with ${pct(r.congestion_rate)} of views congested` : ''}. `;
+    if (busiest) s += `Busiest corridor so far: <b>${esc(busiest.corridor)}</b>. `;
+  } else s += 'No daylight video has been collected yet, so there are no traffic numbers to report. ';
+  s += acc ? `Daylight counts are within one vehicle of a hand count on <b>${pct(acc.share_within_one)}</b> of test frames.` : 'Daylight detection accuracy has not been measured yet.';
+  $('brief').innerHTML = s;
+}
+
+// Time series with dark periods shaded
+function timeChart(){
+  const el = $('p-time');
+  if (!tl.length) { el.innerHTML = '<div class="empty">No runs yet.</div>'; return; }
+  const W = 1200, H = 260, L = 44, R = 12, T = 10, B = 28;
+  const t0 = +new Date(tl[0].run_started_at_local), t1 = +new Date(last.run_started_at_local) || t0 + 1;
+  const x = t => L + (+new Date(t) - t0) / Math.max(1, t1 - t0) * (W - L - R);
+  const vals = tl.map(r => r.vehicles_per_min).filter(v => v != null);
+  const hi = Math.max(10, ...vals) * 1.1, y = v => T + (1 - v / hi) * (H - T - B);
+  let g = '';
+  // dark bands from consecutive non-daylight runs
+  let start = null;
+  tl.forEach((r, i) => {
+    if (!r.is_daylight && start == null) start = r.run_started_at_local;
+    if ((r.is_daylight || i === tl.length - 1) && start != null) { const end = r.is_daylight ? r.run_started_at_local : r.run_started_at_local; g += `<rect x="${x(start)}" y="${T}" width="${Math.max(2, x(end) - x(start))}" height="${H - T - B}" fill="var(--night)"/>`; start = null; }
+  });
+  const step = hi > 40 ? 10 : hi > 20 ? 5 : 2;
+  for (let v = 0; v <= hi; v += step) g += `<line class="gridl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  // day ticks at local midnight
+  const d0 = new Date(t0); d0.setHours(24, 0, 0, 0);
+  for (let d = +d0; d <= t1; d += 864e5) { const xx = x(new Date(d)); g += `<line class="gridl" x1="${xx}" x2="${xx}" y1="${T}" y2="${H - B}"/><text class="ax" x="${xx + 4}" y="${H - 8}">${new Date(d).toLocaleDateString('en-US', {weekday:'short', day:'numeric'})}</text>`; }
+  // line segments, broken across gaps
+  let path = '', pen = false;
+  tl.forEach(r => { if (r.vehicles_per_min == null) { pen = false; return; } path += `${pen ? 'L' : 'M'}${x(r.run_started_at_local).toFixed(1)},${y(r.vehicles_per_min).toFixed(1)}`; pen = true; });
+  g += `<path d="${path}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>`;
+  tl.forEach(r => { if (r.vehicles_per_min != null) g += `<circle cx="${x(r.run_started_at_local)}" cy="${y(r.vehicles_per_min)}" r="2.5" fill="var(--s1)"/>`; });
+  g += `<line id="xh" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--line-2)" opacity="0"/><rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Average vehicles per minute per camera for each collector run">${g}</svg>`;
+  const svg = el.querySelector('svg'), hit = svg.querySelector('#hit'), xh = svg.querySelector('#xh');
+  hit.addEventListener('mousemove', e => {
+    const r = svg.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W;
+    let best = tl[0]; tl.forEach(p => { if (Math.abs(x(p.run_started_at_local) - sx) < Math.abs(x(best.run_started_at_local) - sx)) best = p; });
+    const bx = x(best.run_started_at_local); xh.setAttribute('x1', bx); xh.setAttribute('x2', bx); xh.setAttribute('opacity', 1);
+    const body = best.vehicles_per_min != null ? `<b>${num(best.vehicles_per_min)} veh/min</b><br><span>${best.cameras_valid} valid cameras · ${pct(best.congestion_rate)} congested</span>` : `<span>${best.is_daylight ? 'No valid captures' : 'Dark: excluded'} · ${best.cameras_read}/${best.cameras_attempted} feeds live</span>`;
+    showTip(svg, `${fmtTime(best.run_started_at_local)}<br>${body}`, bx / W * r.width, 10);
+  });
+  hit.addEventListener('mouseleave', () => { xh.setAttribute('opacity', 0); hideTip(); });
+}
+timeChart();
+
+// Typical day by hour
+const corrs = ['All corridors', ...[...new Set(D.hourly.map(h => h.corridor))].filter(c => c !== 'All corridors').sort()];
+$('corr').innerHTML = corrs.map(c => `<option>${esc(c)}</option>`).join('');
+function hourChart(){
+  const c = $('corr').value, el = $('p-hour');
+  const rows = D.hourly.filter(h => h.corridor === c);
+  const types = [['Weekday', 'var(--s1)'], ['Weekend', 'var(--s2)']].filter(([t]) => rows.some(r => r.day_type === t));
+  $('hour-legend').innerHTML = types.map(([t, col]) => `<span><i style="background:${col}"></i>${t}</span>`).join('');
+  if (!rows.length) { el.innerHTML = '<div class="empty">No daylight video for this corridor yet.</div>'; return; }
+  const W = 560, H = 230, L = 36, R = 10, T = 10, B = 26;
+  const hi = Math.max(10, ...rows.map(r => r.vehicles_per_min || 0)) * 1.1;
+  const x = h => L + h / 23 * (W - L - R), y = v => T + (1 - v / hi) * (H - T - B);
+  let g = '';
+  const step = hi > 40 ? 10 : hi > 20 ? 5 : 2;
+  for (let v = 0; v <= hi; v += step) g += `<line class="gridl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  [0, 6, 12, 18, 23].forEach(h => g += `<text class="ax" x="${x(h)}" y="${H - 8}" text-anchor="middle">${h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? h + 'a' : (h - 12) + 'p'}</text>`);
+  types.forEach(([t, col]) => {
+    const pts = rows.filter(r => r.day_type === t).sort((a, b) => a.local_hour - b.local_hour);
+    let d = '', prevH = null;
+    pts.forEach(p => { d += `${prevH != null && p.local_hour === prevH + 1 ? 'L' : 'M'}${x(p.local_hour)},${y(p.vehicles_per_min)}`; prevH = p.local_hour; });
+    g += `<path d="${d}" fill="none" stroke="${col}" stroke-width="2"/>` + pts.map(p => `<circle cx="${x(p.local_hour)}" cy="${y(p.vehicles_per_min)}" r="4" fill="${col}" stroke="var(--surface)" stroke-width="2" data-t="${t}" data-h="${p.local_hour}" data-v="${p.vehicles_per_min}" data-n="${p.valid_captures}" data-c="${p.congestion_rate}"/>`).join('');
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vehicles per minute by hour of day">${g}</svg>`;
+  const svg = el.querySelector('svg');
+  svg.querySelectorAll('circle').forEach(cc => {
+    cc.addEventListener('mouseenter', () => { const r = svg.getBoundingClientRect(); const h = +cc.dataset.h; showTip(svg, `<b>${cc.dataset.t}, ${h % 12 || 12}${h < 12 ? 'am' : 'pm'}</b><br>${num(+cc.dataset.v)} veh/min · ${pct(+cc.dataset.c)} congested<br><span>${cc.dataset.n} captures</span>`, +cc.getAttribute('cx') / W * r.width, +cc.getAttribute('cy') / H * r.height); });
+    cc.addEventListener('mouseleave', hideTip);
+  });
+}
+$('corr').addEventListener('change', hourChart);
+hourChart();
+
+// Corridors over the whole window
+{
+  const agg = {};
+  D.corridors.forEach(r => { const a = agg[r.corridor] ||= {c: r.corridor, cap: 0, val: 0, vpmW: 0, tr: 0, trW: 0, cg: 0}; a.cap += r.captures; a.val += r.valid_captures; if (r.vehicles_per_min != null) { a.vpmW += r.vehicles_per_min * r.valid_captures; } if (r.truck_share != null) { a.tr += r.truck_share * r.valid_captures; a.trW += r.valid_captures; } if (r.congestion_rate != null) a.cg += r.congestion_rate * r.valid_captures; });
+  const rows = Object.values(agg).map(a => ({...a, vpm: a.val ? a.vpmW / a.val : null, truck: a.trW ? a.tr / a.trW : null, cong: a.val ? a.cg / a.val : null})).sort((a, b) => (b.vpm ?? -1) - (a.vpm ?? -1));
+  const mx = Math.max(1, ...rows.map(r => r.vpm || 0));
+  const days = new Set(D.corridors.map(r => r.local_date)).size;
+  $('corr-sub').textContent = `All ${days} day${days === 1 ? '' : 's'} collected, valid daylight captures`;
+  $('t-corr').innerHTML = `<table><thead><tr><th>Corridor</th><th>Veh/min</th><th>Trucks</th><th>Congested</th><th>Valid / captures</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.c)}</td><td><span class="wbar" style="width:${r.vpm ? Math.round(r.vpm / mx * 60) : 0}px"></span>${num(r.vpm)}</td><td>${pct(r.truck)}</td><td>${pct(r.cong)}</td><td>${r.val} / ${r.cap}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// Cameras
+{
+  const reasonName = Object.fromEntries(D.qc_rules.map(q => [q.rule_id, q.rule_name]));
+  $('cams').innerHTML = D.cameras.map(c => {
+    const route = (c.route || '').replace(/\s+/g, '');
+    let st;
+    if (c.last_stream_status !== 'ok') st = `<span class="pill bad">${c.last_stream_status === 'offline' ? 'Offline' : 'Unreadable'}</span>`;
+    else if (['no_signal', 'frozen_feed', 'short_clip'].includes(c.last_exclusion_reason)) st = `<span class="pill warn">${esc(reasonName[c.last_exclusion_reason])}</span>`;
+    else st = `<span class="pill ok">Live</span>`;
+    return `<article class="cam"><div class="img">${c.still ? `<img src="${c.still}" alt="Current view from ${esc(c.camera_name)}" loading="lazy">` : ''}${st}</div>
+      <div class="meta"><div class="name"><span class="chip">${esc(route)}</span>${esc(c.camera_name.replace(/^(I|US|SR)-\d+\s*/, ''))}</div>
+      <div class="stats"><span>${num(c.vehicles_per_min_24h)} veh/min</span><span title="Share of captures in the last 24h with live video">${pct(c.availability_24h)} live</span></div>
+      ${c.main_issue_24h ? `<div class="sub" style="font-size:12px;color:var(--text-3)">Most common issue: ${esc(reasonName[c.main_issue_24h])}</div>` : ''}</div></article>`;
+  }).join('');
+}
+
+// Data quality across the window
+{
+  const agg = {};
+  D.quality.forEach(q => { const a = agg[q.outcome] ||= {o: q.outcome, name: q.outcome_name, p: q.priority, n: 0}; a.n += q.captures; });
+  const rows = Object.values(agg).sort((a, b) => a.p - b.p), total = rows.reduce((s, r) => s + r.n, 0);
+  $('q-sub').textContent = `${total.toLocaleString()} captures`;
+  const col = o => o === 'valid' ? 'var(--ok)' : o === 'low_light' ? 'var(--line-2)' : ['feed_offline', 'decode_failed'].includes(o) ? 'var(--bad)' : 'var(--warn)';
+  $('quality').innerHTML = rows.map(r => `<div class="qbar"><span>${esc(r.name)}</span><div class="track"><div class="fill" style="width:${r.n / total * 100}%;background:${col(r.o)}"></div></div><span class="n">${pct(r.n / total)}</span></div>`).join('');
+}
+
+// Accuracy
+{
+  const box = a => !a ? '' : `<div class="box"><h3>${a.light}${a.light === 'Daylight' ? (a.mean_abs_error <= 1.5 && a.share_within_one >= 0.7 ? '<span class="pill ok">Passes gate</span>' : '<span class="pill bad">Fails gate</span>') : '<span class="pill na">Excluded</span>'}</h3>
+    <dl><dt>Frames hand-counted</dt><dd>${a.frames}</dd><dt>Vehicles counted by hand</dt><dd>${a.labelled_vehicles}</dd><dt>Found by the detector</dt><dd>${a.predicted_vehicles} (${pct(a.count_ratio)})</dd><dt>Average miss per frame</dt><dd>${num(a.mean_abs_error, 2)}</dd><dt>Within one vehicle</dt><dd>${pct(a.share_within_one)}</dd></dl></div>`;
+  const day = D.accuracy.find(a => a.light === 'Daylight'), dark = D.accuracy.find(a => a.light === 'Dark');
+  $('acc').innerHTML = box(day) + box(dark) || '<div class="empty">No labelled frames yet.</div>';
+  $('acc-note').textContent = dark ? `At night the detector finds ${pct(dark.count_ratio)} of the vehicles a person can see, mostly because headlights blur into glare. That is why dark captures are excluded instead of reported as empty roads. The dbt build fails if daylight accuracy falls below the gate.` : '';
+}
+
+// Weather
+{
+  const rows = D.weather;
+  $('t-wx').innerHTML = rows.length ? `<table><thead><tr><th>Conditions</th><th>Daylight captures</th><th>Valid</th><th>Veh/min</th><th>Congested</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.weather)}</td><td>${r.daylight_captures}</td><td>${pct(r.valid_rate)}</td><td>${num(r.vehicles_per_min)}</td><td>${pct(r.congestion_rate)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">No daylight captures yet.</div>';
+}
+})();
+</script>
+</body>
+</html>
