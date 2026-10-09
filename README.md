@@ -48,7 +48,7 @@ make all                                   # sync the data branch, load DuckDB, 
 make serve                                 # http://localhost:8000
 ```
 
-On Snowflake (key-pair sign-in, database `CLOVERLEAF`):
+On Snowflake (key-pair sign-in, database `CLOVERLEAF`). Verified Oct 9 2026: 111 captures, 5,892 weather observations and 36 eval predictions loaded, all 64 dbt nodes pass.
 
 ```
 python ingest/load_snowflake.py --duckdb warehouse/cloverleaf.duckdb --database CLOVERLEAF --schemas raw_cloverleaf
