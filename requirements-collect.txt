@@ -1,0 +1,7 @@
+# what the camera collector needs (the pipeline itself only needs requirements.txt)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+ultralytics>=8.3,<9
+lap>=0.5
+opencv-python-headless>=4.9

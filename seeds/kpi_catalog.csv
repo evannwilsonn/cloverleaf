@@ -1,0 +1,7 @@
+kpi_id,kpi_name,category,definition,unit,direction,target,target_type
+collection_coverage,Collection coverage,Platform,Collector runs that happened / runs scheduled (every 30 minutes),pct,higher,0.90,min
+feed_availability,Feed availability,Platform,Captures where the camera stream was live and readable / captures attempted,pct,higher,0.85,min
+daylight_valid_rate,Daylight valid captures,Platform,Captures that passed every rule / captures attempted in daylight,pct,higher,0.75,min
+vehicles_per_min,Vehicles per minute,Traffic,Moving vehicles tracked through the view per minute of video per camera (valid daylight captures),veh/min,none,,
+truck_share,Truck and bus share,Traffic,Trucks and buses / all moving vehicles tracked,pct,none,,
+congestion_rate,Congested captures,Traffic,Valid captures where traffic moved under the free-flow threshold with a full view / valid captures,pct,lower,,

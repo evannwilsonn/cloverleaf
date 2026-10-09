@@ -1,0 +1,43 @@
+version: 2
+models:
+  - name: fct_captures
+    description: One row per camera per collector run with its checks, traffic measures and weather.
+    data_tests:
+      - unique_combination: {arguments: {columns: [run_id, camera_id]}}
+    columns:
+      - name: local_hour
+        data_tests:
+          - value_between: {arguments: {min_value: 0, max_value: 23}}
+      - name: corridor
+        data_tests: [not_null]
+  - name: fct_collection_runs
+    columns:
+      - name: run_id
+        data_tests: [unique, not_null]
+      - name: cameras_attempted
+        data_tests:
+          - value_between: {arguments: {min_value: 1, max_value: 100}}
+  - name: dim_cameras
+    columns:
+      - name: camera_id
+        data_tests: [unique, not_null]
+  - name: rpt_kpi_daily
+    description: One row per KPI per Pacific day; definitions and targets in seeds/kpi_catalog.csv.
+    data_tests:
+      - unique_combination: {arguments: {columns: [local_date, kpi_id]}}
+    columns:
+      - name: target_status
+        data_tests:
+          - accepted_values: {arguments: {values: [met, missed, no target]}}
+  - name: rpt_camera_status
+    columns:
+      - name: camera_id
+        data_tests: [unique]
+      - name: availability_24h
+        data_tests:
+          - value_between: {arguments: {min_value: 0, max_value: 1}}
+  - name: rpt_detection_accuracy
+    description: Detector counts vs hand labels, split by light.
+  - name: rpt_hourly_profile
+    data_tests:
+      - unique_combination: {arguments: {columns: [corridor, day_type, local_hour]}}

@@ -1,0 +1,14 @@
+frame_file,camera_id,cars,trucks,buses,motorcycles,sun_elevation,model
+tv216_20261009T075803.jpg,tv216,0,0,0,0,-57.97,yolov8s.pt
+tv302_20261009T075803.jpg,tv302,8,0,0,0,-58.12,yolov8s.pt
+tv327_20261009T075803.jpg,tv327,0,0,0,0,-58.18,yolov8s.pt
+tv515_20261009T075803.jpg,tv515,1,0,0,0,-58.01,yolov8s.pt
+tv516_20261009T075803.jpg,tv516,0,0,0,0,-58.04,yolov8s.pt
+tva24_20261009T075803.jpg,tva24,1,1,0,0,-58.18,yolov8s.pt
+tva40_20261009T075803.jpg,tva40,0,0,0,0,-58.1,yolov8s.pt
+tvb91_20261009T075803.jpg,tvb91,0,0,0,0,-58.56,yolov8s.pt
+tvc48_20261009T075803.jpg,tvc48,0,0,0,0,-58.56,yolov8s.pt
+tvc70_20261009T075803.jpg,tvc70,1,0,0,0,-58.53,yolov8s.pt
+tvc98_20261009T075803.jpg,tvc98,1,0,0,0,-58.46,yolov8s.pt
+tvd01_20261009T075803.jpg,tvd01,0,0,0,0,-58.1,yolov8s.pt
+tve01_20261009T075803.jpg,tve01,0,0,0,0,-58.33,yolov8s.pt

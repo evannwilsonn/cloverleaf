@@ -1,0 +1,8 @@
+rule_id,priority,rule_name,description
+feed_offline,1,Feed offline,The camera's video stream did not open (Caltrans takes feeds down for maintenance or incidents)
+decode_failed,2,Video unreadable,The stream opened but no frames could be decoded
+short_clip,3,Clip too short,The stream stalled and delivered under the minimum share of expected frames
+no_signal,4,No signal,The stream is up but shows a black frame or Caltrans' flat 'No video' card (very low brightness or contrast)
+frozen_feed,5,Frozen feed,Consecutive frames are effectively identical so the picture is not live
+low_light,6,Low light,The sun is below the horizon; headlight glare makes vehicle detection unreliable (measured in rpt_detection_accuracy)
+obstructed,7,Blurred or obstructed,"Sharpness is far below the camera's own normal (fog, rain on the lens, smearing)"

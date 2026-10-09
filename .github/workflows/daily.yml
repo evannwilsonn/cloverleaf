@@ -1,0 +1,57 @@
+# Daily at 05:10 Pacific: load everything collected into Snowflake, build and test with dbt,
+# export the dashboard from Snowflake and publish it to GitHub Pages.
+# Needs repository secrets SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY (the .p8 file's contents),
+# and Pages set to "GitHub Actions" under Settings -> Pages.
+name: daily
+on:
+  schedule:
+    - cron: "10 12 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: daily
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_ROLE: SYSADMIN
+      SNOWFLAKE_WAREHOUSE: PORTFOLIO_WH
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt dbt-snowflake snowflake-connector-python opencv-python-headless
+      - name: Write the Snowflake key
+        run: |
+          mkdir -p ~/.snowflake
+          printf '%s\n' "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.snowflake/rsa_key.p8
+          chmod 600 ~/.snowflake/rsa_key.p8
+          echo "SNOWFLAKE_PRIVATE_KEY_PATH=$HOME/.snowflake/rsa_key.p8" >> "$GITHUB_ENV"
+      - name: Sync collected data and land it
+        run: |
+          python ingest/sync_data.py
+          python ingest/load_raw.py
+          python ingest/load_snowflake.py --duckdb warehouse/cloverleaf.duckdb --database CLOVERLEAF --schemas raw_cloverleaf
+      - name: dbt build on Snowflake
+        run: dbt build --profiles-dir . --target snowflake
+      - name: Export the dashboard from Snowflake
+        run: |
+          python dashboard/export_data.py --target snowflake
+          mkdir -p site && cp dashboard/index.html dashboard/data.json site/
+      - uses: actions/upload-pages-artifact@v3
+        with: {path: site}
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: {name: github-pages, url: "${{ steps.deployment.outputs.page_url }}"}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

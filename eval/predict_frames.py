@@ -1,0 +1,50 @@
+"""
+Run the collector's detector over the hand-labelled evaluation frames (eval/frames/*.jpg) with
+exactly the collector's settings, and write eval/predictions.csv. dbt compares these counts to
+seeds/eval_labels.csv in rpt_detection_accuracy and fails the build if daylight accuracy drops
+below the gate.
+
+Frame names are <camera_id>_<YYYYMMDDTHHMMSS>.jpg (UTC), as saved by capture.py --save-frames.
+
+    python eval/predict_frames.py
+"""
+from __future__ import annotations
+
+import csv
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "collector"))
+import capture  # noqa: E402
+
+import cv2  # noqa: E402
+from ultralytics import YOLO  # noqa: E402
+
+
+def main() -> None:
+    cams = {c["camera_id"]: c for c in csv.DictReader(open(ROOT / "seeds" / "cameras.csv", encoding="utf-8"))}
+    model = YOLO(capture.MODEL)
+    rows = []
+    for f in sorted((ROOT / "eval" / "frames").glob("*.jpg")):
+        cam_id, stamp = f.stem.rsplit("_", 1)
+        when = datetime.strptime(stamp, "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+        cam = cams[cam_id]
+        r = model.predict(cv2.imread(str(f)), classes=list(capture.VEHICLES), conf=capture.CONF,
+                          imgsz=capture.WIDTH, verbose=False)[0]
+        cls = r.boxes.cls.int().tolist()
+        counts = {name: sum(1 for c in cls if c == k) for k, name in capture.VEHICLES.items()}
+        rows.append({"frame_file": f.name, "camera_id": cam_id, "cars": counts["car"], "trucks": counts["truck"],
+                     "buses": counts["bus"], "motorcycles": counts["motorcycle"],
+                     "sun_elevation": capture.solar_elevation(float(cam["latitude"]), float(cam["longitude"]), when),
+                     "model": capture.MODEL})
+    with open(ROOT / "eval" / "predictions.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    print(f"{len(rows)} frames -> eval/predictions.csv")
+
+
+if __name__ == "__main__":
+    main()

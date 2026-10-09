@@ -1,0 +1,11 @@
+data/
+warehouse/
+target/
+dbt_packages/
+logs/
+out/
+site/
+__pycache__/
+*.pt
+.venv/
+*.p8

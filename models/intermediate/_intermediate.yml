@@ -1,0 +1,21 @@
+version: 2
+models:
+  - name: int_captures__checked
+    description: Every capture with the capture rules applied; exclusion_reason is the first rule failed by priority.
+    columns:
+      - name: exclusion_reason
+        data_tests:
+          - relationships: {arguments: {to: ref('qc_rules'), field: rule_id}}
+  - name: int_captures__measured
+    description: Traffic measures for valid captures, with each camera's own free-flow baseline.
+    columns:
+      - name: vehicles_per_min
+        data_tests:
+          - not_null
+          - value_between: {arguments: {min_value: 0, max_value: 400}}
+      - name: speed_ratio
+        data_tests:
+          - value_between: {arguments: {min_value: 0, max_value: 20}}
+  - name: int_weather__hourly
+    data_tests:
+      - unique_combination: {arguments: {columns: [station_id, hour_utc]}}

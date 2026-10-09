@@ -1,0 +1,43 @@
+version: 2
+models:
+  - name: stg_captures
+    description: One row per camera per collector run, typed from the raw JSON payload.
+    data_tests:
+      - unique_combination: {arguments: {columns: [run_id, camera_id]}}
+    columns:
+      - name: camera_id
+        data_tests:
+          - not_null
+          - relationships: {arguments: {to: ref('cameras'), field: camera_id}}
+      - name: stream_status
+        data_tests:
+          - accepted_values: {arguments: {values: [ok, offline, error]}}
+      - name: captured_at
+        data_tests: [not_null]
+      - name: sun_elevation
+        data_tests:
+          - value_between: {arguments: {min_value: -90, max_value: 90}}
+      - name: brightness
+        data_tests:
+          - value_between: {arguments: {min_value: 0, max_value: 255}}
+      - name: speed_index
+        description: Median share of the frame diagonal a moving vehicle crosses per second.
+        data_tests:
+          - value_between: {arguments: {min_value: 0, max_value: 5}}
+  - name: stg_weather_observations
+    description: NWS observations, one row per station per observation time.
+    data_tests:
+      - unique_combination: {arguments: {columns: [station_id, observed_at]}}
+    columns:
+      - name: station_id
+        data_tests:
+          - relationships: {arguments: {to: ref('weather_stations'), field: station_id}}
+      - name: temperature_c
+        data_tests:
+          - value_between: {arguments: {min_value: -20, max_value: 50}}
+  - name: stg_eval_predictions
+    columns:
+      - name: frame_file
+        data_tests:
+          - unique
+          - relationships: {arguments: {to: ref('eval_labels'), field: frame_file}}

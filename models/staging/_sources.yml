@@ -1,0 +1,15 @@
+version: 2
+sources:
+  - name: raw_cloverleaf
+    description: Collector output landed unchanged by ingest/load_raw.py (one JSON payload per row).
+    loaded_at_field: _loaded_at
+    tables:
+      - name: captures
+        description: One row per camera per collector run, as written by collector/capture.py.
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 24, period: hour}
+      - name: weather_observations
+        description: NWS station observations; overlapping pulls repeat rows on purpose.
+      - name: eval_predictions
+        description: Detector counts on the hand-labelled evaluation frames (eval/predict_frames.py).

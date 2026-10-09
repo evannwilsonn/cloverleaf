@@ -1,0 +1,51 @@
+name: cloverleaf
+version: "1.0.0"
+config-version: 2
+profile: cloverleaf
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  cloverleaf:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: table
+      +schema: intermediate
+    marts:
+      +materialized: table
+      core:
+        +schema: core
+      reporting:
+        +schema: reporting
+
+seeds:
+  cloverleaf:
+    +schema: reference
+    cameras:
+      +column_types: {latitude: double, longitude: double}
+    weather_stations:
+      +column_types: {latitude: double, longitude: double}
+
+vars:
+  # the collector is scheduled every 30 minutes
+  runs_per_day: 48
+  # capture rules (see seeds/qc_rules.csv for what each one means)
+  min_frame_share: 0.6          # share of the expected sampled frames a clip must deliver
+  frozen_motion: 0.15           # mean pixel change between frames below this = frozen feed
+  min_brightness: 12            # mean brightness (0-255) below this = black frame
+  min_contrast: 12              # pixel std-dev below this = flat 'No video' placeholder card
+  min_sun_elevation: 0          # degrees; below this detection is unreliable (see rpt_detection_accuracy)
+  min_relative_sharpness: 0.35  # share of the camera's own median sharpness
+  # congestion: a capture is congested when vehicles move slower than this share of the camera's
+  # free-flow speed index while the view is at least as full as the camera's median
+  congested_speed_ratio: 0.55
+  # detection accuracy gates on the hand-labelled frames (daylight)
+  max_daylight_mae: 1.5
+  min_daylight_within_one: 0.7

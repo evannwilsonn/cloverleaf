@@ -1,0 +1,27 @@
+version: 2
+seeds:
+  - name: cameras
+    description: The Caltrans District 4 cameras Cloverleaf records, their corridor and nearest NWS station.
+    columns:
+      - name: camera_id
+        data_tests: [unique, not_null]
+      - name: weather_station
+        data_tests:
+          - relationships: {arguments: {to: ref('weather_stations'), field: station_id}}
+  - name: weather_stations
+    columns:
+      - name: station_id
+        data_tests: [unique]
+  - name: qc_rules
+    columns:
+      - name: rule_id
+        data_tests: [unique]
+  - name: kpi_catalog
+    columns:
+      - name: kpi_id
+        data_tests: [unique]
+  - name: eval_labels
+    description: Vehicles a person counted on each evaluation frame (vehicles on the roadway; parked cars off the freeway excluded).
+    columns:
+      - name: frame_file
+        data_tests: [unique]

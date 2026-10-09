@@ -1,0 +1,20 @@
+# dbt looks for this file in the project folder first.
+# Local runs use DuckDB; set the env vars below and add --target snowflake for Snowflake.
+cloverleaf:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: warehouse/cloverleaf.duckdb
+      threads: 4
+    snowflake:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      # key-pair sign-in: no password stored anywhere
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'SYSADMIN') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'PORTFOLIO_WH') }}"
+      database: CLOVERLEAF
+      schema: ANALYTICS
+      threads: 8
