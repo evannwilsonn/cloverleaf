@@ -47,7 +47,7 @@ def main() -> None:
     with open(path, "w", encoding="utf-8") as fh:
         for r in rows:
             fh.write(json.dumps({**r, "fetched_at": now.isoformat()}) + "\n")
-    print(f"{len(rows)} observations -> {path.relative_to(ROOT)}" + (f"; failed: {failed}" if failed else ""))
+    print(f"{len(rows)} observations -> {path}" + (f"; failed: {failed}" if failed else ""))
 
 
 if __name__ == "__main__":

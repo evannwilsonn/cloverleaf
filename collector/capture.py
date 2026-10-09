@@ -211,7 +211,7 @@ def main() -> None:
             fh.write(json.dumps(rec) + "\n")
             print(f"{cam['camera_id']:<6} {rec['status']:<8} moving={sum(rec.get('moving_vehicles', {}).values()):>3} "
                   f"in_view={sum(rec.get('in_view_mean', {}).values()):>5.1f} bright={rec.get('brightness')} sun={rec['sun_elevation']}")
-    print(f"run {run_id}: {ok}/{len(cams)} cameras analysed in {time.time() - t0:.0f}s -> {out_file.relative_to(ROOT)}")
+    print(f"run {run_id}: {ok}/{len(cams)} cameras analysed in {time.time() - t0:.0f}s -> {out_file}")
 
 
 if __name__ == "__main__":
