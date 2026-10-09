@@ -47,5 +47,7 @@ vars:
   # free-flow speed index while the view is at least as full as the camera's median
   congested_speed_ratio: 0.55
   # detection accuracy gates on the hand-labelled frames (daylight)
-  max_daylight_mae: 1.5
-  min_daylight_within_one: 0.7
+  # Daylight counting gate, relative so it holds for quiet and busy frames alike:
+  # the detector must find at least 80% of hand-counted vehicles, and miss by under 25% per frame on average.
+  min_daylight_count_ratio: 0.8
+  max_daylight_mean_abs_pct_error: 0.25

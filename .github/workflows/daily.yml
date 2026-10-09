@@ -1,6 +1,6 @@
 # Daily at 05:10 Pacific: load everything collected into Snowflake, build and test with dbt,
 # export the dashboard from Snowflake and publish it to GitHub Pages.
-# Needs repository secrets SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY (the .p8 file's contents),
+# Uses Snowflake when repository secrets SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY (the .p8 file's contents) exist, DuckDB otherwise;
 # and Pages set to "GitHub Actions" under Settings -> Pages.
 name: daily
 on:
@@ -18,42 +18,42 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      site: ${{ steps.site.outputs.built }}
     env:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
       SNOWFLAKE_ROLE: SYSADMIN
       SNOWFLAKE_WAREHOUSE: PORTFOLIO_WH
     steps:
-      - name: Check the Snowflake secrets exist
+      - name: Choose the warehouse (Snowflake when its secrets exist, otherwise DuckDB)
         id: ready
         run: |
-          if [ -z "$SNOWFLAKE_ACCOUNT" ]; then echo "::notice::Snowflake secrets not set yet; skipping the daily build."; echo "go=false" >> "$GITHUB_OUTPUT"; else echo "go=true" >> "$GITHUB_OUTPUT"; fi
+          if [ -z "$SNOWFLAKE_ACCOUNT" ]; then echo "::notice::Snowflake secrets not set; building on DuckDB."; echo "sf=false" >> "$GITHUB_OUTPUT"; else echo "sf=true" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v4
-        if: steps.ready.outputs.go == 'true'
         with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
-        if: steps.ready.outputs.go == 'true'
         with: {python-version: "3.12", cache: pip}
-      - if: steps.ready.outputs.go == 'true'
-        run: pip install -r requirements.txt dbt-snowflake snowflake-connector-python opencv-python-headless
+      - run: pip install -r requirements.txt dbt-snowflake snowflake-connector-python opencv-python-headless
       - name: Write the Snowflake key
-        if: steps.ready.outputs.go == 'true'
+        if: steps.ready.outputs.sf == 'true'
         run: |
           mkdir -p ~/.snowflake
           printf '%s\n' "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.snowflake/rsa_key.p8
           chmod 600 ~/.snowflake/rsa_key.p8
           echo "SNOWFLAKE_PRIVATE_KEY_PATH=$HOME/.snowflake/rsa_key.p8" >> "$GITHUB_ENV"
       - name: Sync collected data and land it
-        if: steps.ready.outputs.go == 'true'
         run: |
           python ingest/sync_data.py
           python ingest/load_raw.py
-          python ingest/load_snowflake.py --duckdb warehouse/cloverleaf.duckdb --database CLOVERLEAF --schemas raw_cloverleaf
-      - name: dbt build on Snowflake
-        if: steps.ready.outputs.go == 'true'
-        run: dbt build --profiles-dir . --target snowflake
+      - name: Load Snowflake
+        if: steps.ready.outputs.sf == 'true'
+        run: python ingest/load_snowflake.py --duckdb warehouse/cloverleaf.duckdb --database CLOVERLEAF --schemas raw_cloverleaf
+      - name: dbt build
+        run: |
+          if [ "${{ steps.ready.outputs.sf }}" = "true" ]; then dbt build --profiles-dir . --target snowflake; else dbt build --profiles-dir .; fi
       - name: Keep the build results for monitoring (Cloverfield reads these)
-        if: always() && steps.ready.outputs.go == 'true'
+        if: always()
         run: |
           [ -f target/run_results.json ] || exit 0
           git config user.name "cloverleaf-bot"
@@ -61,16 +61,19 @@ jobs:
           git worktree add ../data origin/data && cd ../data && git switch -c data-tmp
           mkdir -p ops/dbt && cp ../${{ github.event.repository.name }}/target/run_results.json "ops/dbt/$(date -u +%Y%m%dT%H%M%S)_${{ github.run_id }}.json"
           git add ops && git commit -qm "dbt results $(date -u +%F)" && git push origin HEAD:data
-      - name: Export the dashboard from Snowflake
-        if: steps.ready.outputs.go == 'true'
+      - name: Export the dashboard
+        if: always()
         run: |
-          python dashboard/export_data.py --target snowflake
+          if [ "${{ steps.ready.outputs.sf }}" = "true" ]; then python dashboard/export_data.py --target snowflake; else python dashboard/export_data.py; fi
           mkdir -p site && cp dashboard/index.html dashboard/data.json site/
       - uses: actions/upload-pages-artifact@v3
-        if: steps.ready.outputs.go == 'true' && vars.PAGES_ENABLED == 'true'
+        if: always() && vars.PAGES_ENABLED == 'true' && hashFiles('site/data.json') != ''
         with: {path: site}
+      - id: site
+        if: always() && vars.PAGES_ENABLED == 'true' && hashFiles('site/data.json') != ''
+        run: echo "built=true" >> "$GITHUB_OUTPUT"
   deploy:
-    if: vars.PAGES_ENABLED == 'true'
+    if: always() && needs.build.outputs.site == 'true'
     needs: build
     runs-on: ubuntu-latest
     environment: {name: github-pages, url: "${{ steps.deployment.outputs.page_url }}"}

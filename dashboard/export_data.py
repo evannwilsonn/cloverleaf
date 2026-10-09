@@ -17,6 +17,7 @@ import urllib.request
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 TABLES = {
@@ -28,6 +29,11 @@ TABLES = {
     "weather": "select * from reporting.rpt_weather_impact order by daylight_captures desc",
     "accuracy": "select * from reporting.rpt_detection_accuracy order by light desc",
     "timeline": "select * from reporting.rpt_network_timeline order by run_started_at_local",
+    "captures": """select run_id, camera_id, captured_at_local, is_daylight, is_valid, exclusion_reason,
+                           vehicles_per_min, moving_vehicles, moving_heavy, is_congested, speed_ratio, clip_seconds
+                    from core.fct_captures
+                    where captured_at >= (select max(captured_at) from core.fct_captures) - interval '48 hours'
+                    order by captured_at_local, camera_id""",
     "kpi_catalog": "select * from reference.kpi_catalog",
     "qc_rules": "select * from reference.qc_rules order by priority",
 }
@@ -87,10 +93,15 @@ def main() -> None:
     ap.add_argument("--no-stills", action="store_true")
     args = ap.parse_args()
     run = query(args.target)
-    out = {"generated": datetime.now().isoformat(timespec="seconds"), "source": args.target}
+    out = {"generated": datetime.now(ZoneInfo("America/Los_Angeles")).replace(tzinfo=None).isoformat(timespec="seconds"),
+           "source": args.target}
     for key, sql in TABLES.items():
         cols, rows = run(sql)
         out[key] = [{c: clean(v) for c, v in zip(cols, r)} for r in rows]
+    # thresholds the page quotes, read from dbt's vars so the page never hardcodes them
+    import yaml
+    v = yaml.safe_load((ROOT / "dbt_project.yml").read_text(encoding="utf-8")).get("vars", {})
+    out["meta"] = {k: v.get(k) for k in ("runs_per_day", "min_daylight_count_ratio", "max_daylight_mean_abs_pct_error")}
     if not args.no_stills:
         for cam in out["cameras"]:
             cam["still"] = still(cam["still_url"])

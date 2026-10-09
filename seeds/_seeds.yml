@@ -21,7 +21,12 @@ seeds:
       - name: kpi_id
         data_tests: [unique]
   - name: eval_labels
-    description: Vehicles a person counted on each evaluation frame (vehicles on the roadway; parked cars off the freeway excluded).
+    description: >
+      Vehicles a person counted on each evaluation frame (vehicles on the roadway; parked cars off the freeway excluded).
+      count_zone_top (0-1, blank = whole frame) limits the count to vehicles whose centre is below that share of the
+      frame height, where busy far traffic cannot be counted reliably by hand; the detector is scored in the same zone.
+    config:
+      column_types: {frame_file: varchar, labelled_vehicles: integer, count_zone_top: double, note: varchar}
     columns:
       - name: frame_file
         data_tests: [unique]

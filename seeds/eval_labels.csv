@@ -1,14 +1,37 @@
-frame_file,labelled_vehicles,note
-tv216_20261009T075803.jpg,2,night; one on the overpass
-tv302_20261009T075803.jpg,8,night; work zone; parked cars off the freeway not counted
-tv327_20261009T075803.jpg,1,night; dense fog
-tv515_20261009T075803.jpg,8,night
-tv516_20261009T075803.jpg,3,night; one hidden in headlight glare
-tva24_20261009T075803.jpg,3,night; far traffic is one glare blob
-tva40_20261009T075803.jpg,2,night; one hidden in headlight glare
-tvb91_20261009T075803.jpg,1,night; headlights on the far overpass
-tvc48_20261009T075803.jpg,2,night
-tvc70_20261009T075803.jpg,7,night
-tvc98_20261009T075803.jpg,6,night
-tvd01_20261009T075803.jpg,5,night
-tve01_20261009T075803.jpg,2,night
+frame_file,labelled_vehicles,count_zone_top,note
+tv216_20261009T075803.jpg,2,,night; one on the overpass
+tv302_20261009T075803.jpg,8,,night; work zone; parked cars off the freeway not counted
+tv327_20261009T075803.jpg,1,,night; dense fog
+tv515_20261009T075803.jpg,8,,night
+tv516_20261009T075803.jpg,3,,night; one hidden in headlight glare
+tva24_20261009T075803.jpg,3,,night; far traffic is one glare blob
+tva40_20261009T075803.jpg,2,,night; one hidden in headlight glare
+tvb91_20261009T075803.jpg,1,,night; headlights on the far overpass
+tvc48_20261009T075803.jpg,2,,night
+tvc70_20261009T075803.jpg,7,,night
+tvc98_20261009T075803.jpg,6,,night
+tvd01_20261009T075803.jpg,5,,night
+tve01_20261009T075803.jpg,2,,night
+tv216_20261009T204322.jpg,8,0.46,day; overpass excluded by zone; two vehicles cut off at the bottom edge counted
+tv327_20261009T204322.jpg,12,0.55,day; vehicles near the horizon excluded by zone
+tv515_20261009T204322.jpg,41,0.69,day; dense queue under the bridge; hand count about ±4
+tv516_20261009T204322.jpg,16,0.37,day; far roadway beyond the overpass excluded by zone
+tv818_20261009T204322.jpg,1,,day; close-up view
+tva24_20261009T204322.jpg,13,0.52,day; far traffic excluded by zone
+tva40_20261009T204322.jpg,8,0.37,day; far traffic excluded by zone
+tvb91_20261009T204322.jpg,8,,day; raindrops on the lens; lower roadway in shadow is empty
+tvc48_20261009T204322.jpg,13,0.56,day
+tvc70_20261009T204322.jpg,23,0.44,day; bus at the zone edge excluded
+tvc98_20261009T204322.jpg,19,0.56,"day; intersection traffic on the right included, parked cars excluded"
+tve01_20261009T204322.jpg,12,0.3,day; parked cars in the retail lot excluded
+tv216_20261009T205035.jpg,3,0.46,day; one faint motion-blurred car excluded
+tv327_20261009T205035.jpg,7,0.55,day
+tv516_20261009T205035.jpg,19,0.37,day; a tractor-trailer counted once
+tv818_20261009T205035.jpg,0,,day; empty roadway
+tva24_20261009T205035.jpg,14,0.52,day
+tva40_20261009T205035.jpg,16,0.37,day
+tvb91_20261009T205035.jpg,4,,day; raindrops on the lens
+tvc48_20261009T205035.jpg,20,0.56,day; a pickup towing a trailer counted once
+tvc70_20261009T205035.jpg,18,0.44,day
+tvc98_20261009T205035.jpg,27,0.56,day; queue and intersection; hand count about ±4
+tve01_20261009T205035.jpg,10,0.3,day; parked cars in the retail lot excluded
