@@ -186,7 +186,9 @@ def main() -> None:
     out_dir = Path(args.out) / day
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"{started.strftime('%H%M%S')}_{run_id}.jsonl"
-    base = {"run_id": run_id, "run_started_at": started.isoformat(), "runner": os.environ.get("GITHUB_ACTIONS") and "github-actions" or platform.node(),
+    base = {"run_id": run_id, "run_started_at": started.isoformat(),
+            "github_run_id": os.environ.get("GITHUB_RUN_ID"), "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+            "github_event": os.environ.get("GITHUB_EVENT_NAME"), "runner": os.environ.get("GITHUB_ACTIONS") and "github-actions" or platform.node(),
             "code_version": git_commit(), "model": MODEL, "clip_target_seconds": CLIP_SECONDS, "sample_fps": SAMPLE_FPS}
     ok = 0
     with open(out_file, "w", encoding="utf-8") as fh:
@@ -199,7 +201,9 @@ def main() -> None:
             if clip["frames"]:
                 try:
                     rec.update(image_signals(clip["frames"]))
+                    ta = time.time()
                     rec.update(analyse(clip["frames"], clip["stream_fps"] or 15))
+                    rec["analysis_seconds"] = round(time.time() - ta, 2)
                     ok += 1
                     if args.save_frames:
                         d = Path(args.save_frames)

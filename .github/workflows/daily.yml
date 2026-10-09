@@ -8,7 +8,7 @@ on:
     - cron: "10 12 * * *"
   workflow_dispatch: {}
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
@@ -42,6 +42,15 @@ jobs:
           python ingest/load_snowflake.py --duckdb warehouse/cloverleaf.duckdb --database CLOVERLEAF --schemas raw_cloverleaf
       - name: dbt build on Snowflake
         run: dbt build --profiles-dir . --target snowflake
+      - name: Keep the build results for monitoring (Cloverfield reads these)
+        if: always()
+        run: |
+          [ -f target/run_results.json ] || exit 0
+          git config user.name "cloverleaf-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git worktree add ../data origin/data && cd ../data && git switch -c data-tmp
+          mkdir -p ops/dbt && cp ../${{ github.event.repository.name }}/target/run_results.json "ops/dbt/$(date -u +%Y%m%dT%H%M%S)_${{ github.run_id }}.json"
+          git add ops && git commit -qm "dbt results $(date -u +%F)" && git push origin HEAD:data
       - name: Export the dashboard from Snowflake
         run: |
           python dashboard/export_data.py --target snowflake
